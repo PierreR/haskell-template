@@ -1,0 +1,45 @@
+name:                haskell-template
+version:             0.1.0
+homepage:            https://github.com/PierreR/haskell-template
+license:             BSD3
+build-type:          Simple
+extra-source-files:  README.adoc
+cabal-version:       >=1.24
+
+
+Data-Files:
+  share/doc/cicd-shell.html
+  share/doc/cicd-shell.pdf
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Template.Prelude
+  other-modules:       Paths_haskell_template
+  default-extensions:    FlexibleContexts
+                       , LambdaCase
+                       , NoImplicitPrelude
+                       , OverloadedStrings
+                       , StrictData
+  build-depends:       base
+                       , lens
+                       , optparse-applicative >= 0.13
+                       , transformers >= 0.5
+                       , protolude >= 0.2
+                       , text
+  default-language:    Haskell2010
+  ghc-options: -Wall -Wno-name-shadowing -Wno-missing-signatures
+
+executable template
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  default-extensions:    FlexibleContexts
+                       , LambdaCase
+                       , NoImplicitPrelude
+                       , OverloadedStrings
+                       , StrictData
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                       , haskell-template
+                       , lens
+                       , text
+  default-language:    Haskell2010
