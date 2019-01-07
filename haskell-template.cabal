@@ -13,7 +13,9 @@ Data-Files:
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Template.Prelude
+  exposed-modules:       Template.Prelude
+                       , Template.Lens.Playground
+                       , Template.Math.Prime
   other-modules:       Paths_haskell_template
   default-extensions:    FlexibleContexts
                        , LambdaCase
