@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wunused-top-binds¶ #-}
 
-module Template.Math.RPN ()
+module Template.Math.RPN
+  ( evalRPN)
 where
 
 import Template.Prelude
@@ -10,37 +10,41 @@ import qualified Data.Text.Read as Text
 
 type Stack = [Integer]
 type ErrMsg = Text
-type EvalM = StateT Stack (Either ErrMsg)
+type EvalM = ExceptT ErrMsg (State Stack)
 
 push :: Integer -> EvalM ()
 push x = modify (x:)
-
-err :: ErrMsg -> EvalM ()
-err = lift . Left
 
 pop :: EvalM Integer
 pop = do
   xs <- get
   when (null xs) $
-    err "Invalid input: trying to pop from an empty stack"
+    throwError "Trying to pop from an empty stack"
   put (tailSafe xs)
-  lift $ maybeToRight "Invalid input: the head of the stack is empty" $  headMay xs
+  case headMay xs of
+    Just s -> pure s
+    Nothing -> throwError "The head of the stack is empty"
 
 checkResult :: EvalM ()
 checkResult = do
   xs <- get
   when (length xs /= 1) $
-    err "Invalid input: the expression could not be fully resolved"
+    throwError "The expression could not be fully resolved"
+
+readSafe :: Text -> EvalM Integer
+readSafe t = do
+  let err = "Can't convert " <> t <> " into an integer"
+  ExceptT $ pure $ bimap (const err) fst (Text.decimal t)
+  -- case Text.decimal t of
+  --   Right (s,_) -> pure s
+  --   Left _ -> throwError err
 
 evalRPN :: Text -> Either ErrMsg Integer
-evalRPN expr = evalStateT evalRPN' []
+evalRPN expr = evalState (runExceptT evalRPN') []
   where
-    evalRPN' = traverse step (Text.words expr) >> checkResult >> pop
+    evalRPN' = traverse_ step (Text.words expr) >> checkResult >> pop
     step "+" = process_tops (+)
     step "-" = process_tops (-)
     step "*" = process_tops (*)
-    step t = do
-      let err_msg = "Can't convert " <> t <> " into an integer"
-      (s, _) <- lift $ first (const err_msg) (Text.decimal t)
-      push s
+    step t   = readSafe t >>= push
     process_tops op = flip op <$> pop <*> pop >>= push
