@@ -1,34 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Template.Math.RPN
-  (evalRPN, EnvVars)
+  (evalRPN, EnvVars, readDecimal)
 where
 
-import Template.Prelude hiding (show)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import qualified Data.Text.Read as Text
-import qualified Data.HashMap.Strict as Map
+import qualified Data.HashMap.Strict       as Map
+import qualified Data.Text                 as Text
+import           Data.Text.Prettyprint.Doc
+import qualified Data.Text.Read            as Text
+import           Template.Prelude          hiding (show)
 
--- import GHC.Show (Show(..))
+data EvalError = NotEnoughElements | NotANumber Text | ExtraElements
+
+instance Pretty EvalError where
+  pretty (NotANumber err) = pretty ("Can't convert " <> err <> " into an integer") <> line
+  pretty ExtraElements = pretty ("The expression could not be fully resolved" :: Text) <> line
+  pretty NotEnoughElements = pretty ("Not enough elements in the expression" :: Text) <> line
 
 type EnvVars = Map.HashMap Text Integer
 type Stack = [Integer]
 type EvalM = ReaderT EnvVars (ExceptT EvalError (State Stack))
-
-data EvalError = NotEnoughElements | NotANumber Text | ExtraElements
-
-printNotANumber err = "Can't convert " <> err <> " into an integer"
-printExtraElements = "The expression could not be fully resolved"
-printNotEnoughElements = "Not enough elements in the expression"
-
-instance Print EvalError where
-  hPutStr h (NotANumber err) = liftIO $ Text.hPutStr h (printNotANumber err)
-  hPutStr h ExtraElements = liftIO $ Text.hPutStr h printExtraElements
-  hPutStr h NotEnoughElements = liftIO $ Text.hPutStr h printNotEnoughElements
-  hPutStrLn h (NotANumber err) = liftIO $ Text.hPutStrLn h (printNotANumber err)
-  hPutStrLn h ExtraElements = liftIO $ Text.hPutStrLn h printExtraElements
-  hPutStrLn h NotEnoughElements = liftIO $ Text.hPutStrLn h printNotEnoughElements
 
 push :: Integer -> EvalM ()
 push x = modify (x:)
@@ -40,7 +31,7 @@ pop = do
     throwError NotEnoughElements
   put (tailSafe xs)
   case headMay xs of
-    Just s -> pure s
+    Just s  -> pure s
     Nothing -> throwError NotEnoughElements -- "The head of the stack is empty"
 
 checkResult :: EvalM ()
@@ -50,16 +41,20 @@ checkResult = do
     throwError ExtraElements
 
 handleNaN :: Text -> Maybe Integer -> EvalM Integer
-handleNaN s Nothing = throwError (NotANumber s)
+handleNaN s Nothing   = throwError (NotANumber s)
 handleNaN _ (Just n ) = pure n
+
+
+readDecimal :: Text -> Maybe Integer
+readDecimal = hush . second fst . Text.decimal
 
 readSafe :: Text -> EvalM Integer
 readSafe t = do
   readSafe' t `catchError` handler
   where
-    readSafe' t = handleNaN t $ hush $ second fst (Text.decimal t)
+    readSafe' t = handleNaN t (readDecimal t)
     handler (NotANumber n) = asks (Map.lookup n) >>= handleNaN t
-    handler e = throwError e
+    handler e              = throwError e
 
 evalRPN :: Text -> EnvVars -> Either EvalError Integer
 evalRPN expr env = evalState (runExceptT (runReaderT evalRPN' env)) []
