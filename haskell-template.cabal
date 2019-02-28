@@ -46,6 +46,7 @@ executable template
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                        , haskell-template
+                       , transformers >= 0.5
                        , lens
                        , prettyprinter >= 1.2
                        , text
