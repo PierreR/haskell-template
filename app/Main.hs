@@ -25,31 +25,26 @@ askVar = do
       askVar
     Just v -> pure (var, v)
 
-type Promp = ExceptT EnvVars (StateT EnvVars IO)
-envPromp :: Promp ()
-envPromp = do
+-- A Prompt is an interactive loop that will prompt the user for values
+-- in order to build 'EnvVars'.
+-- The loop is broken by the user and should always return.
+type Prompt = MaybeT (StateT EnvVars IO) EnvVars
+envPrompt :: Prompt
+envPrompt = do
   (var, val)<- liftIO askVar
   modify (Map.insert var val)
   putText "Do you want to setup other variables ? If yes press y"
   input_from_user <- liftIO getLine
   if input_from_user == "y"
-    then do
-      putText "Let's go on"
-    else do
-     ExceptT . pure . Left =<< get
-
-loop :: Promp () -> IO (Either EnvVars ())
-loop = flip evalStateT Map.empty . runExceptT . forever
+    then continue
+    else break =<< get
 
 getEnvVar :: IO EnvVars
 getEnvVar = do
   putText "Need to set values ? (y or enter to ignore)"
   i <- getLine
   if i == "y"
-    then do
-      loop envPromp >>= \case
-        Left env -> pure env
-        Right _ -> panic "This should never happen. Please change me to a MaybeT"
+    then evalStateT (loop envPrompt) Map.empty
     else pure mempty
 
 main :: IO ()

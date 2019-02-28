@@ -18,6 +18,7 @@ library
                        , Template.Math.Prime
                        , Template.Math.RPN
   other-modules:       Paths_haskell_template
+                       , Template.Prelude.Loop
   default-extensions:    FlexibleContexts
                        , LambdaCase
                        , NoImplicitPrelude
