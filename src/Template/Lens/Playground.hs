@@ -1,4 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-binds -Wno-missing-local-signatures #-}
+
 module Template.Lens.Playground ()
 where
 
